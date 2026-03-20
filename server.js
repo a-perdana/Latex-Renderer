@@ -14,9 +14,25 @@ app.get('/health', (_, res) => res.json({ ok: true }))
 
 function buildDocument(code) {
   const trimmed = code.trim()
+  const defaultLibs = ['calc', 'arrows.meta', 'angles', 'quotes', 'patterns', 'positioning']
 
-  // Already a full document
-  if (trimmed.startsWith('\\documentclass')) return trimmed
+  // Already a full document — but still ensure default libs are present
+  if (trimmed.startsWith('\\documentclass')) {
+    // Extract any existing \usetikzlibrary calls
+    const libMatches = [...trimmed.matchAll(/\\usetikzlibrary\{([^}]+)\}/g)]
+    const existingLibs = new Set(libMatches.flatMap(m => m[1].split(',').map(s => s.trim()).filter(Boolean)))
+    const missingLibs = defaultLibs.filter(l => !existingLibs.has(l))
+    if (missingLibs.length === 0) return trimmed
+    // Inject missing libs by merging into first \usetikzlibrary or inserting before \begin{document}
+    if (libMatches.length > 0) {
+      const allLibs = [...new Set([...existingLibs, ...defaultLibs])]
+      // Replace all \usetikzlibrary calls with a single merged one
+      const deduped = trimmed.replace(/\\usetikzlibrary\{[^}]+\}/g, '').replace(/\n{3,}/g, '\n\n')
+      return deduped.replace('\\begin{document}', `\\usetikzlibrary{${allLibs.join(',')}}\n\\begin{document}`)
+    }
+    // No \usetikzlibrary at all — inject before \begin{document}
+    return trimmed.replace('\\begin{document}', `\\usetikzlibrary{${defaultLibs.join(',')}}\n\\begin{document}`)
+  }
 
   // Extract tikzpicture block
   const blockMatch = trimmed.match(/\\begin\{tikzpicture\}[\s\S]*?\\end\{tikzpicture\}/)
@@ -25,7 +41,6 @@ function buildDocument(code) {
   // Extract \usetikzlibrary calls
   const libMatches = [...trimmed.matchAll(/\\usetikzlibrary\{([^}]+)\}/g)]
   const libs = [...new Set(libMatches.flatMap(m => m[1].split(',').map(s => s.trim()).filter(Boolean)))]
-  const defaultLibs = ['calc', 'arrows.meta', 'angles', 'quotes', 'patterns', 'positioning']
   const allLibs = [...new Set([...defaultLibs, ...libs])]
 
   return `\\documentclass[tikz,border=6mm]{standalone}
