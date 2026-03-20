@@ -52,11 +52,22 @@ ${tikzBlock}
 \\end{document}`
 }
 
+function fixBraces(code) {
+  // Count unmatched { and append missing } to fix common Gemini truncation errors
+  let depth = 0
+  for (const ch of code) {
+    if (ch === '{') depth++
+    else if (ch === '}') depth--
+  }
+  if (depth > 0) code = code + '}'.repeat(depth)
+  return code
+}
+
 app.post('/render', async (req, res) => {
   const { code } = req.body
   if (!code) return res.status(400).json({ error: 'Missing code' })
 
-  const fullDoc = buildDocument(code)
+  const fullDoc = buildDocument(fixBraces(code))
   const id = crypto.randomBytes(8).toString('hex')
   const dir = path.join(os.tmpdir(), `latex-${id}`)
   fs.mkdirSync(dir)
