@@ -53,6 +53,11 @@ ${tikzBlock}
 }
 
 function fixCode(code) {
+  // Fix common AI mistakes: underscore instead of space in TikZ pic keys
+  // e.g. angle_radius → angle radius, angle_eccentricity → angle eccentricity
+  code = code.replace(/\bangle_radius\b/g, 'angle radius')
+  code = code.replace(/\bangle_eccentricity\b/g, 'angle eccentricity')
+
   // Close unmatched { braces
   let depth = 0
   for (const ch of code) {
