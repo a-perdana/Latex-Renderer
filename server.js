@@ -54,9 +54,21 @@ ${tikzBlock}
 
 function fixCode(code) {
   // Fix common AI mistakes: underscore instead of space in TikZ pic keys
-  // e.g. angle_radius → angle radius, angle_eccentricity → angle eccentricity
   code = code.replace(/\bangle_radius\b/g, 'angle radius')
   code = code.replace(/\bangle_eccentricity\b/g, 'angle eccentricity')
+
+  // Remove comment lines (% ...) — AI sometimes writes long comments that confuse pdflatex
+  // Keep the tikzpicture structure intact; only strip comment-only lines
+  code = code.replace(/^\s*%.*$/gm, '')
+
+  // Fix \pic angle syntax: calc expressions like $(A)+(1,0)$ are not valid as \pic angle args.
+  // Replace \pic{angle = EXPR--B--C} where EXPR contains $ with just the middle coord repeated
+  // e.g. angle = $(R)+(1,0)$--R--S  →  strip the bad first arg, keep angle = A--R--S form
+  code = code.replace(/\{angle\s*=\s*\$[^$]*\$\s*--\s*([A-Za-z]+)\s*--\s*([A-Za-z]+)\s*\}/g,
+    (_, mid, end) => `{angle = ${mid}--${mid}--${end}}`)
+
+  // Remove trailing empty lines left by comment removal
+  code = code.replace(/\n{3,}/g, '\n\n')
 
   // Close unmatched { braces
   let depth = 0
