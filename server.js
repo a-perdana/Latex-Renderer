@@ -67,6 +67,10 @@ function fixCode(code) {
   code = code.replace(/\{angle\s*=\s*\$[^$]*\$\s*--\s*([A-Za-z]+)\s*--\s*([A-Za-z]+)\s*\}/g,
     (_, mid, end) => `{angle = ${mid}--${mid}--${end}}`)
 
+  // Remove invalid angle options={reflex} — this key does not exist in TikZ angles library
+  code = code.replace(/,\s*angle options\s*=\s*\{[^}]*\}/g, '')
+  code = code.replace(/angle options\s*=\s*\{[^}]*\},?\s*/g, '')
+
   // Remove trailing empty lines left by comment removal
   code = code.replace(/\n{3,}/g, '\n\n')
 
